@@ -136,6 +136,7 @@
     <ClInclude Include="mainmenu.h">
       <FileType>CppForm</FileType>
     </ClInclude>
+    <ClInclude Include="mangosteen_core.h" />
     <ClInclude Include="showvdo.h">
       <FileType>CppForm</FileType>
     </ClInclude>
