@@ -1,5 +1,6 @@
 #pragma once
 #include "camera.h"
+#include "showvdo.h"
 namespace Mangkudd {
 
 	using namespace System;
@@ -37,7 +38,8 @@ namespace Mangkudd {
 	private: System::Windows::Forms::ToolStripContainer^ toolStripContainer1;
 	protected:
 	private: System::Windows::Forms::Button^ button1;
-	private: System::Windows::Forms::Button^ button2;
+	private: System::Windows::Forms::Button^ UploadVDO;
+
 
 	private:
 		/// <summary>
@@ -54,7 +56,7 @@ namespace Mangkudd {
 		{
 			System::ComponentModel::ComponentResourceManager^ resources = (gcnew System::ComponentModel::ComponentResourceManager(mainmenu::typeid));
 			this->toolStripContainer1 = (gcnew System::Windows::Forms::ToolStripContainer());
-			this->button2 = (gcnew System::Windows::Forms::Button());
+			this->UploadVDO = (gcnew System::Windows::Forms::Button());
 			this->button1 = (gcnew System::Windows::Forms::Button());
 			this->toolStripContainer1->ContentPanel->SuspendLayout();
 			this->toolStripContainer1->SuspendLayout();
@@ -63,12 +65,12 @@ namespace Mangkudd {
 			// toolStripContainer1
 			// 
 			// 
-			// toolStripContainer1.opencambt
+			// toolStripContainer1.ContentPanel
 			// 
 			this->toolStripContainer1->ContentPanel->BackColor = System::Drawing::SystemColors::ActiveCaption;
-			this->toolStripContainer1->ContentPanel->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"toolStripContainer1.opencambt.BackgroundImage")));
+			this->toolStripContainer1->ContentPanel->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"toolStripContainer1.ContentPanel.BackgroundImage")));
 			this->toolStripContainer1->ContentPanel->BackgroundImageLayout = System::Windows::Forms::ImageLayout::Stretch;
-			this->toolStripContainer1->ContentPanel->Controls->Add(this->button2);
+			this->toolStripContainer1->ContentPanel->Controls->Add(this->UploadVDO);
 			this->toolStripContainer1->ContentPanel->Controls->Add(this->button1);
 			this->toolStripContainer1->ContentPanel->Size = System::Drawing::Size(999, 592);
 			this->toolStripContainer1->Dock = System::Windows::Forms::DockStyle::Fill;
@@ -78,14 +80,15 @@ namespace Mangkudd {
 			this->toolStripContainer1->TabIndex = 0;
 			this->toolStripContainer1->Text = L"toolStripContainer1";
 			// 
-			// button2
+			// UploadVDO
 			// 
-			this->button2->Location = System::Drawing::Point(663, 515);
-			this->button2->Name = L"button2";
-			this->button2->Size = System::Drawing::Size(130, 66);
-			this->button2->TabIndex = 1;
-			this->button2->Text = L"UploadVDO";
-			this->button2->UseVisualStyleBackColor = true;
+			this->UploadVDO->Location = System::Drawing::Point(663, 515);
+			this->UploadVDO->Name = L"UploadVDO";
+			this->UploadVDO->Size = System::Drawing::Size(130, 66);
+			this->UploadVDO->TabIndex = 1;
+			this->UploadVDO->Text = L"UploadVDO";
+			this->UploadVDO->UseVisualStyleBackColor = true;
+			this->UploadVDO->Click += gcnew System::EventHandler(this, &mainmenu::UploadVDO_Click);
 			// 
 			// button1
 			// 
@@ -119,5 +122,9 @@ namespace Mangkudd {
 		camera^ camForm = gcnew camera();
 		camForm->Show();
 	}
-	};
+	private: System::Void UploadVDO_Click(System::Object^ sender, System::EventArgs^ e) {
+		showvdo^ vdoForm = gcnew showvdo();
+		vdoForm->Show();
+	}
+};
 }

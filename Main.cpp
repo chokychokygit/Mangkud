@@ -1,12 +1,14 @@
-#include "mainmenu.h"
-using namespace Mangkudd;
+#include "mainmenu.h" // หรือชื่อฟอร์มหน้าแรกของคุณ
+
+using namespace System;
+using namespace System::Windows::Forms;
+
 [STAThreadAttribute]
-int Main(array<System::String^>^ args)
-{
-	// Enabling Windows XP visual effects first
+int Main(array<System::String^>^ args) {
 	Application::EnableVisualStyles();
 	Application::SetCompatibleTextRenderingDefault(false);
-	// Create the main window and run it
-	Application::Run(gcnew mainmenu());
+	// เรียกหน้าแรกของโปรเจกต์ Mangkudd
+	Mangkudd::mainmenu form;
+	Application::Run(% form);
 	return 0;
 }
