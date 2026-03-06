@@ -1,8 +1,10 @@
 ﻿#pragma once
 // ================================================================
-//  showvdo.h
-//  ref class showvdo เป็น class แรกในไฟล์ → Designer ทำงานได้
-//  MangosteenAnalyzer + YoloParser อยู่ใน mangosteen_core.h
+//  showvdo.h  (v2)
+//  เปลี่ยนแปลง:
+//  - ส่ง det.confidence เข้า MangosteenAnalyzer::analyze()
+//  - ข้าม detection ที่ grade == '?' (ไม่ผ่าน guard)
+//  - วาด debug threshold text ใต้ bounding box (เหมือน camera.h)
 // ================================================================
 #include "mangosteen_core.h"
 
@@ -31,12 +33,12 @@ namespace Mangkudd {
 			InitializeComponent();
 			video = new cv::VideoCapture();
 			try {
-				net = new cv::dnn::Net(cv::dnn::readNetFromONNX("best.onnx"));
+				net = new cv::dnn::Net(cv::dnn::readNetFromONNX("C:\\Users\\ASUS\\Downloads\\best.onnx"));
 				net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
 				net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 			}
 			catch (...) {
-				MessageBox::Show("ไม่พบไฟล์ best.onnx\nกรุณาวางไฟล์ไว้ในโฟลเดอร์เดียวกับ .exe");
+				MessageBox::Show("ไม่พบไฟล์ model ที่ C:\\Users\\ASUS\\Downloads\\best.onnx\nกรุณาตรวจสอบ path ของไฟล์");
 			}
 			videoTimer = gcnew System::Windows::Forms::Timer();
 			videoTimer->Interval = 33;
@@ -145,9 +147,11 @@ namespace Mangkudd {
 	private: System::Void OnVideoTick(System::Object^ sender, EventArgs^ e)
 	{
 		if (isPaused || !video->isOpened()) return;
+
 		cv::Mat frame;
 		if (!video->read(frame) || frame.empty()) { videoTimer->Stop(); return; }
 
+		// ── YOLO inference ────────────────────────────────────────────
 		cv::Mat blob = cv::dnn::blobFromImage(
 			frame, 1.0 / 255.0, cv::Size(640, 640),
 			cv::Scalar(0, 0, 0), true, false);
@@ -160,27 +164,54 @@ namespace Mangkudd {
 
 		for (const auto& det : detections)
 		{
+			// ── Un_Ripe (classId==1) → Grade D ทันที ─────────────────
 			if (det.classId == 1) {
 				countD++;
 				gradeD->Text = "Grade D: " + countD.ToString();
 				cv::rectangle(frame, det.box, cv::Scalar(128, 128, 128), 2);
-				cv::putText(frame, "D (Unripe)",
+				cv::putText(frame, "D Unripe",
 					cv::Point(det.box.x, det.box.y - 6),
-					cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(128, 128, 128), 2);
+					cv::FONT_HERSHEY_SIMPLEX, 0.6,
+					cv::Scalar(128, 128, 128), 2);
+				char conf[40];
+				snprintf(conf, sizeof(conf), "conf:%.2f", det.confidence);
+				cv::putText(frame, conf,
+					cv::Point(det.box.x, det.box.y + det.box.height + 16),
+					cv::FONT_HERSHEY_SIMPLEX, 0.40,
+					cv::Scalar(160, 160, 160), 1);
 				continue;
 			}
 
+			// ── Ripe (classId==0): ตรวจสอบขนาด box ──────────────────
 			cv::Rect safeBox = det.box & cv::Rect(0, 0, frame.cols, frame.rows);
-			if (safeBox.width < 20 || safeBox.height < 20) continue;
+			if (safeBox.width < Thresholds::MIN_BOX_SIZE ||
+				safeBox.height < Thresholds::MIN_BOX_SIZE) continue;
 
-			MangosteenAnalyzer::Result res = MangosteenAnalyzer::analyze(frame(safeBox).clone());
+			// ── Crop เฉพาะใน bounding box ────────────────────────────
+			cv::Mat roi = frame(safeBox).clone();
 
+			// ── Pipeline 3 ขั้น พร้อมส่ง confidence ─────────────────
+			MangosteenAnalyzer::Result res =
+				MangosteenAnalyzer::analyze(roi, det.confidence);
+
+			// ── ไม่ผ่าน Guard → วาดกรอบสีเหลืองบอก SKIP ─────────────
+			if (!res.isValid) {
+				cv::rectangle(frame, det.box, cv::Scalar(0, 200, 255), 1);
+				cv::putText(frame, res.debugText,
+					cv::Point(det.box.x, det.box.y - 6),
+					cv::FONT_HERSHEY_SIMPLEX, 0.40,
+					cv::Scalar(0, 200, 255), 1);
+				continue;
+			}
+
+			// ── นับเกรด ───────────────────────────────────────────────
 			switch (res.grade) {
 			case 'A': countA++; gradeA->Text = "Grade A: " + countA.ToString(); break;
 			case 'B': countB++; gradeB->Text = "Grade B: " + countB.ToString(); break;
 			default:  countC++; gradeC->Text = "Grade C: " + countC.ToString(); break;
 			}
 
+			// ── เลือกสี box ───────────────────────────────────────────
 			cv::Scalar boxColor;
 			std::string label;
 			switch (res.grade) {
@@ -190,27 +221,58 @@ namespace Mangkudd {
 			}
 
 			cv::rectangle(frame, det.box, boxColor, 2);
-			cv::putText(frame, label,
-				cv::Point(det.box.x, det.box.y - 6),
-				cv::FONT_HERSHEY_SIMPLEX, 0.65, boxColor, 2);
 
-			char dbg[80];
-			snprintf(dbg, sizeof(dbg), "B:%.1f%% R:%.2f T:%.1f Sc:%.1f",
-				res.blemishPercent, res.ripenessScore, res.roughness, res.finalScore);
-			cv::putText(frame, dbg,
-				cv::Point(det.box.x, det.box.y + det.box.height + 16),
-				cv::FONT_HERSHEY_SIMPLEX, 0.42, boxColor, 1);
+			// ── บน box: Grade + confidence ────────────────────────────
+			char topText[60];
+			snprintf(topText, sizeof(topText), "%s conf:%.2f",
+				label.c_str(), det.confidence);
+			cv::putText(frame, topText,
+				cv::Point(det.box.x, det.box.y - 6),
+				cv::FONT_HERSHEY_SIMPLEX, 0.55, boxColor, 2);
+
+			// ── ใต้ box: ค่า Threshold แต่ละขั้น ─────────────────────
+			char line1[80];
+			snprintf(line1, sizeof(line1),
+				"Ripe:%.2f(>0.5) Rgh:%.1f(<%.0f)",
+				res.ripenessScore,
+				res.roughness,
+				(res.grade == 'A') ? Thresholds::ROUGHNESS_A : Thresholds::ROUGHNESS_B);
+			cv::putText(frame, line1,
+				cv::Point(det.box.x, det.box.y + det.box.height + 14),
+				cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
+
+			char line2[80];
+			snprintf(line2, sizeof(line2),
+				"Blm:%.1f%%(<%.0f%%) Sc:%.1f(>%.0f)",
+				res.blemishPercent,
+				(res.grade == 'A') ? Thresholds::BLEMISH_PCT_A : Thresholds::BLEMISH_PCT_B,
+				res.finalScore,
+				(res.grade == 'A') ? Thresholds::SCORE_A : Thresholds::SCORE_B);
+			cv::putText(frame, line2,
+				cv::Point(det.box.x, det.box.y + det.box.height + 28),
+				cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
 		}
 
+		// ── แสดงผล frame ──────────────────────────────────────────────
 		cv::Mat rgb;
 		cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
+
 		System::Drawing::Bitmap^ bmp = gcnew System::Drawing::Bitmap(
-			rgb.cols, rgb.rows, (int)rgb.step,
-			System::Drawing::Imaging::PixelFormat::Format24bppRgb,
-			(System::IntPtr)rgb.data);
+			rgb.cols, rgb.rows,
+			System::Drawing::Imaging::PixelFormat::Format24bppRgb);
+
+		System::Drawing::Rectangle rect(0, 0, rgb.cols, rgb.rows);
+		System::Drawing::Imaging::BitmapData^ bmpData =
+			bmp->LockBits(rect,
+				System::Drawing::Imaging::ImageLockMode::WriteOnly,
+				System::Drawing::Imaging::PixelFormat::Format24bppRgb);
+
+		memcpy((unsigned char*)bmpData->Scan0.ToPointer(),
+			rgb.data, rgb.total() * rgb.elemSize());
+		bmp->UnlockBits(bmpData);
+
 		System::Drawing::Image^ oldImg = this->pictureBox1->Image;
-		this->pictureBox1->Image = (System::Drawing::Bitmap^)bmp->Clone();
-		delete bmp;
+		this->pictureBox1->Image = bmp;
 		if (oldImg != nullptr) delete oldImg;
 	}
 
