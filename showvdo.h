@@ -26,7 +26,8 @@ private:
   bool isPaused = false;
 
   int countA = 0, countB = 0, countC = 0, countD = 0;
-
+  int frameCounter = 0;
+  FruitTracker* tracker;
 public:
   showvdo(void) {
     InitializeComponent();
@@ -43,14 +44,18 @@ public:
     videoTimer = gcnew System::Windows::Forms::Timer();
     videoTimer->Interval = 33;
     videoTimer->Tick += gcnew EventHandler(this, &showvdo::OnVideoTick);
+    tracker = new FruitTracker();
+    currentTracks = new std::vector<TrackedFruit>();
   }
 
-protected:
+  protected:
   ~showvdo() {
     if (video && video->isOpened())
       video->release();
     delete video;
     delete net;
+    delete tracker;
+    delete currentTracks;
     if (components)
       delete components;
   }
@@ -186,6 +191,97 @@ private:
 #pragma endregion
 
 private:
+  void drawDetections(cv::Mat& frame, const std::vector<TrackedFruit>& activeTracks) {
+    for (const auto &fruit : activeTracks) {
+      if (fruit.classId == 1 || fruit.smoothedResult.grade == 'D') { // Unripe or Grade D
+        cv::rectangle(frame, fruit.box, cv::Scalar(128, 128, 128), 2);
+        cv::putText(frame, "D Unripe", cv::Point(fruit.box.x, fruit.box.y - 6),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(128, 128, 128), 2);
+        continue;
+      }
+
+      if (!fruit.smoothedResult.isValid) {
+        cv::rectangle(frame, fruit.box, cv::Scalar(0, 200, 255), 1);
+        cv::putText(frame, fruit.smoothedResult.debugText, cv::Point(fruit.box.x, fruit.box.y - 6),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(0, 200, 255), 1);
+        continue;
+      }
+
+      cv::Scalar boxColor;
+      std::string label;
+      switch (fruit.smoothedResult.grade) {
+      case 'A': boxColor = cv::Scalar(0, 255, 0); label = "Grade:A"; break;
+      case 'B': boxColor = cv::Scalar(0, 255, 255); label = "Grade:B"; break;
+      default:  boxColor = cv::Scalar(0, 0, 255); label = "Grade:C"; break;
+      }
+
+      cv::rectangle(frame, fruit.box, boxColor, 2);
+
+      char topText[60];
+      snprintf(topText, sizeof(topText), "%s", label.c_str());
+      cv::putText(frame, topText, cv::Point(fruit.box.x, fruit.box.y - 6),
+                  cv::FONT_HERSHEY_SIMPLEX, 0.55, boxColor, 2);
+
+      char line1[80];
+      snprintf(line1, sizeof(line1), "Grn:%.0f%% Pnk:%.0f%% Red:%.0f%%",
+               fruit.smoothedResult.stagePct[0], fruit.smoothedResult.stagePct[1], fruit.smoothedResult.stagePct[2]);
+      cv::putText(frame, line1, cv::Point(fruit.box.x, fruit.box.y + fruit.box.height + 14),
+                  cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
+
+      char line2[80];
+      snprintf(line2, sizeof(line2), "Pur:%.0f%% Blk:%.0f%% (S%d)",
+               fruit.smoothedResult.stagePct[3], fruit.smoothedResult.stagePct[4], fruit.smoothedResult.dominantStage);
+      cv::putText(frame, line2, cv::Point(fruit.box.x, fruit.box.y + fruit.box.height + 28),
+                  cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
+    }
+  }
+
+private:
+  void displayFrame(cv::Mat& frame) {
+    // Convert BGR -> RGB and copy respecting Bitmap stride
+    cv::Mat rgb;
+    if (frame.channels() == 3) {
+      cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
+    } else if (frame.channels() == 4) {
+      cv::cvtColor(frame, rgb, cv::COLOR_BGRA2RGB);
+    } else {
+      cv::cvtColor(frame, rgb, cv::COLOR_GRAY2RGB);
+    }
+
+    System::Drawing::Bitmap ^ bmp = gcnew System::Drawing::Bitmap(
+        rgb.cols, rgb.rows,
+        System::Drawing::Imaging::PixelFormat::Format24bppRgb);
+
+    System::Drawing::Rectangle rect(0, 0, rgb.cols, rgb.rows);
+    System::Drawing::Imaging::BitmapData ^ bmpData =
+        bmp->LockBits(rect, System::Drawing::Imaging::ImageLockMode::WriteOnly,
+                      System::Drawing::Imaging::PixelFormat::Format24bppRgb);
+
+    unsigned char *dest = (unsigned char *)bmpData->Scan0.ToPointer();
+    const unsigned char *src = rgb.data;
+    int destStride = bmpData->Stride;
+    size_t srcStep = rgb.step[0];
+    int rowBytes = rgb.cols * rgb.elemSize();
+
+    if (rowBytes == destStride) {
+      memcpy(dest, src, (size_t)rowBytes * rgb.rows);
+    } else {
+      for (int y = 0; y < rgb.rows; y++) {
+        memcpy(dest + (size_t)y * destStride, src + (size_t)y * srcStep,
+               (size_t)rowBytes);
+      }
+    }
+    bmp->UnlockBits(bmpData);
+
+    System::Drawing::Image ^ oldImg = this->pictureBox1->Image;
+    this->pictureBox1->Image = bmp;
+    if (oldImg != nullptr)
+      delete oldImg;
+  }
+
+  private:
+  std::vector<TrackedFruit>* currentTracks;
+
   System::Void OnVideoTick(System::Object ^ sender, EventArgs ^ e) {
     if (isPaused || !video->isOpened())
       return;
@@ -196,7 +292,20 @@ private:
       return;
     }
 
-    // ── YOLO inference ────────────────────────────────────────────
+    frameCounter++;
+    if (frameCounter % 3 != 0) {
+      if(currentTracks) drawDetections(frame, *currentTracks);
+      // resize ให้พอดี PictureBox เช่นเดียวกับ inference path
+      cv::Mat skipDisp;
+      if (this->pictureBox1->Width > 0 && this->pictureBox1->Height > 0)
+        cv::resize(frame, skipDisp, cv::Size(this->pictureBox1->Width, this->pictureBox1->Height));
+      else
+        skipDisp = frame;
+      displayFrame(skipDisp);
+      return;
+    }
+
+    // ── YOLO inference (use smaller input for speed) ──────────────
     cv::Mat blob =
         cv::dnn::blobFromImage(frame, 1.0 / 255.0, cv::Size(640, 640),
                                cv::Scalar(0, 0, 0), true, false);
@@ -207,122 +316,29 @@ private:
 
     auto detections = YoloParser::parse(outputs, frame.cols, frame.rows);
 
-    for (const auto &det : detections) {
-      // ── Un_Ripe (classId==1) → Grade D ทันที ─────────────────
-      if (det.classId == 1) {
-        countD++;
-        gradeD->Text = "Grade D: " + countD.ToString();
-        cv::rectangle(frame, det.box, cv::Scalar(128, 128, 128), 2);
-        cv::putText(frame, "D Unripe", cv::Point(det.box.x, det.box.y - 6),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(128, 128, 128),
-                    2);
-        char conf[40];
-        snprintf(conf, sizeof(conf), "conf:%.2f", det.confidence);
-        cv::putText(
-            frame, conf, cv::Point(det.box.x, det.box.y + det.box.height + 16),
-            cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(160, 160, 160), 1);
-        continue;
-      }
-
-      // ── Ripe (classId==0): ตรวจสอบขนาด box ──────────────────
-      cv::Rect safeBox = det.box & cv::Rect(0, 0, frame.cols, frame.rows);
-      if (safeBox.width < Thresholds::MIN_BOX_SIZE ||
-          safeBox.height < Thresholds::MIN_BOX_SIZE)
-        continue;
-
-      // ── Crop เฉพาะใน bounding box ────────────────────────────
-      cv::Mat roi = frame(safeBox).clone();
-
-      // ── Pipeline 3 ขั้น พร้อมส่ง confidence ─────────────────
-      MangosteenAnalyzer::Result res =
-          MangosteenAnalyzer::analyze(roi, det.confidence);
-
-      // ── ไม่ผ่าน Guard → วาดกรอบสีเหลืองบอก SKIP ─────────────
-      if (!res.isValid) {
-        cv::rectangle(frame, det.box, cv::Scalar(0, 200, 255), 1);
-        cv::putText(frame, res.debugText, cv::Point(det.box.x, det.box.y - 6),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(0, 200, 255), 1);
-        continue;
-      }
-
-      // ── นับเกรด ───────────────────────────────────────────────
-      switch (res.grade) {
-      case 'A':
-        countA++;
-        gradeA->Text = "Grade A: " + countA.ToString();
-        break;
-      case 'B':
-        countB++;
-        gradeB->Text = "Grade B: " + countB.ToString();
-        break;
-      default:
-        countC++;
-        gradeC->Text = "Grade C: " + countC.ToString();
-        break;
-      }
-
-      // ── เลือกสี box ───────────────────────────────────────────
-      cv::Scalar boxColor;
-      std::string label;
-      switch (res.grade) {
-      case 'A':
-        boxColor = cv::Scalar(0, 255, 0);
-        label = "Grade:A";
-        break;
-      case 'B':
-        boxColor = cv::Scalar(0, 255, 255);
-        label = "Grade:B";
-        break;
-      default:
-        boxColor = cv::Scalar(0, 0, 255);
-        label = "Grade:C";
-        break;
-      }
-
-      cv::rectangle(frame, det.box, boxColor, 2);
-
-      // ── บน box: Grade + confidence ────────────────────────────
-      char topText[60];
-      snprintf(topText, sizeof(topText), "%s conf:%.2f", label.c_str(),
-               det.confidence);
-      cv::putText(frame, topText, cv::Point(det.box.x, det.box.y - 6),
-                  cv::FONT_HERSHEY_SIMPLEX, 0.55, boxColor, 2);
-
-      // ── ใต้ box: ค่า Threshold แต่ละขั้น ─────────────────────
-      char line1[80];
-      snprintf(line1, sizeof(line1), "Grn:%.0f%% Pnk:%.0f%% Red:%.0f%%",
-               res.stagePct[0], res.stagePct[1], res.stagePct[2]);
-      cv::putText(frame, line1,
-                  cv::Point(det.box.x, det.box.y + det.box.height + 14),
-                  cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
-
-      char line2[80];
-      snprintf(line2, sizeof(line2), "Pur:%.0f%% Blk:%.0f%% (S%d)",
-               res.stagePct[3], res.stagePct[4], res.dominantStage);
-      cv::putText(frame, line2,
-                  cv::Point(det.box.x, det.box.y + det.box.height + 28),
-                  cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
+    if(tracker && currentTracks) {
+        // countA..countD are managed fields; take addresses of native temporaries
+        int nA = countA, nB = countB, nC = countC, nD = countD;
+        *currentTracks = tracker->update(detections, frame, &nA, &nB, &nC, &nD);
+        // copy back results to managed fields
+        countA = nA; countB = nB; countC = nC; countD = nD;
     }
+    
+    // Update labels once per tracked frame
+    gradeA->Text = "Grade A: " + countA.ToString();
+    gradeB->Text = "Grade B: " + countB.ToString();
+    gradeC->Text = "Grade C: " + countC.ToString();
+    gradeD->Text = "Grade D: " + countD.ToString();
 
-    // ── แสดงผล frame ──────────────────────────────────────────────
-    // ยกเลิกการแปลงสี BGR2RGB เพื่อแก้ปัญหาหน้าคน/วิดีโอเป็นสีฟ้า
-    System::Drawing::Bitmap ^ bmp = gcnew System::Drawing::Bitmap(
-        frame.cols, frame.rows,
-        System::Drawing::Imaging::PixelFormat::Format24bppRgb);
+    if(currentTracks) drawDetections(frame, *currentTracks);
 
-    System::Drawing::Rectangle rect(0, 0, frame.cols, frame.rows);
-    System::Drawing::Imaging::BitmapData ^ bmpData =
-        bmp->LockBits(rect, System::Drawing::Imaging::ImageLockMode::WriteOnly,
-                      System::Drawing::Imaging::PixelFormat::Format24bppRgb);
-
-    memcpy((unsigned char *)bmpData->Scan0.ToPointer(), frame.data,
-           frame.total() * frame.elemSize());
-    bmp->UnlockBits(bmpData);
-
-    System::Drawing::Image ^ oldImg = this->pictureBox1->Image;
-    this->pictureBox1->Image = bmp;
-    if (oldImg != nullptr)
-      delete oldImg;
+    // resize ให้พอดี PictureBox แล้วแสดงด้วย displayFrame() (ตรวจ stride ถูกต้อง)
+    cv::Mat disp;
+    if (this->pictureBox1->Width > 0 && this->pictureBox1->Height > 0)
+      cv::resize(frame, disp, cv::Size(this->pictureBox1->Width, this->pictureBox1->Height));
+    else
+      disp = frame;
+    displayFrame(disp);
   }
 
 private:
@@ -344,6 +360,8 @@ private:
       video->open(path);
 
       if (video->isOpened()) {
+        if(tracker) tracker->reset();
+        if(currentTracks) currentTracks->clear();
         countA = countB = countC = countD = 0;
         gradeA->Text = "Grade A: 0";
         gradeB->Text = "Grade B: 0";

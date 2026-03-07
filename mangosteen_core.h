@@ -15,8 +15,8 @@ namespace Mangkudd {
 // ================================================================
 struct Thresholds {
   // --- Guard: Prevent false detection ---
-  static constexpr int MIN_BOX_SIZE = 30;
-  static constexpr float MIN_CONFIDENCE = 0.50f;
+  static constexpr int MIN_BOX_SIZE = 10;
+  static constexpr float MIN_CONFIDENCE = 0.13f;
   static constexpr float SHAPE_RATIO_MAX = 2.5f;
 
   // --- Color Stages (HSV Ranges) ---
@@ -214,7 +214,8 @@ public:
   static std::vector<Detection>
   parse(const std::vector<cv::Mat> &outputs, int frameW, int frameH,
         float confThresh = Thresholds::MIN_CONFIDENCE,
-        float nmsThresh = 0.45f) {
+        float nmsThresh = 0.45f,
+        int inputSize = 640) {
     std::vector<Detection> results;
     if (outputs.empty())
       return results;
@@ -225,8 +226,8 @@ public:
 
     int numDetections = out.cols;
     int numClasses = out.rows - 4;
-    float scaleX = (float)frameW / 640.0f;
-    float scaleY = (float)frameH / 640.0f;
+    float scaleX = (float)frameW / (float)inputSize;
+    float scaleY = (float)frameH / (float)inputSize;
 
     std::vector<cv::Rect> boxes;
     std::vector<float> scores;
@@ -271,6 +272,178 @@ public:
       results.push_back(d);
     }
     return results;
+  }
+};
+
+// ================================================================
+//  FruitTracker (IoU + Moving Average)
+// ================================================================
+struct TrackedFruit {
+  int id;
+  cv::Rect box;
+  int classId;     // 0=Ripe, 1=Un_Ripe
+  int missCount;   // How many frames we haven't seen this fruit
+  
+  // For Moving Average of Stage Percentages
+  std::vector<std::vector<double>> historyPct; 
+  MangosteenAnalyzer::Result smoothedResult;
+
+  void addHistory(const MangosteenAnalyzer::Result& res) {
+    std::vector<double> currentPct(5);
+    for(int i=0; i<5; i++) currentPct[i] = res.stagePct[i];
+    
+    historyPct.push_back(currentPct);
+    if(historyPct.size() > 7) { // Keep last 5 frames
+      historyPct.erase(historyPct.begin());
+    }
+
+    // Calculate Average
+    double avgPct[5] = {0,0,0,0,0};
+    for(const auto& h : historyPct) {
+      for(int i=0; i<5; i++) avgPct[i] += h[i];
+    }
+    for(int i=0; i<5; i++) avgPct[i] /= historyPct.size();
+
+    // Re-evaluate dominant stage based on average
+    double maxPct = -1.0;
+    int domStage = 1;
+    for (int i = 0; i < 5; i++) {
+      smoothedResult.stagePct[i] = avgPct[i];
+      if (avgPct[i] > maxPct) {
+        maxPct = avgPct[i];
+        domStage = i + 1;
+      }
+    }
+
+    // Anti-shadow heuristic
+    if (domStage == 5) {
+      double unripePct = avgPct[0] + avgPct[1];
+      double ripePct = avgPct[2] + avgPct[3];
+      if (unripePct > ripePct * 2.0 && unripePct > 10.0) {
+        domStage = (avgPct[0] > avgPct[1]) ? 1 : 2;
+        maxPct = avgPct[domStage - 1];
+      }
+    }
+
+    smoothedResult.dominantStage = domStage;
+    if (domStage == 1) smoothedResult.grade = 'D';
+    else if (domStage == 2) smoothedResult.grade = 'C';
+    else if (domStage == 3) smoothedResult.grade = 'B';
+    else smoothedResult.grade = 'A';
+
+    smoothedResult.isValid = true;
+    char buf[128];
+    snprintf(buf, sizeof(buf), "Stage:%d P%.0f%%->%c", domStage, maxPct, smoothedResult.grade);
+    smoothedResult.debugText = buf;
+  }
+};
+
+class FruitTracker {
+private:
+  std::vector<TrackedFruit> activeTracks;
+  int nextId = 1;
+  const int MAX_MISS_COUNT = 3; // Remove fruit if unseen for 3 tracked frames
+  const float IOU_THRESHOLD = 0.3f;
+
+  static float calculateIoU(const cv::Rect& r1, const cv::Rect& r2) {
+    cv::Rect intersection = r1 & r2;
+    float intersectionArea = intersection.area();
+    float unionArea = r1.area() + r2.area() - intersectionArea;
+    return (unionArea <= 0) ? 0 : intersectionArea / unionArea;
+  }
+
+public:
+  void reset() {
+    activeTracks.clear();
+    nextId = 1;
+  }
+
+  // Returns list of current tracks, outputting new counts for A,B,C,D
+  std::vector<TrackedFruit> update(const std::vector<YoloParser::Detection>& detections, 
+                                   const cv::Mat& frame,
+                                   int* countA, int* countB, int* countC, int* countD) {
+    
+    std::vector<bool> matched(activeTracks.size(), false);
+    std::vector<TrackedFruit> nextTracks;
+
+    for (const auto& det : detections) {
+      // Find best matching existing track
+      int bestIdx = -1;
+      float bestIoU = 0.0f;
+      
+      for (size_t i = 0; i < activeTracks.size(); i++) {
+        if (matched[i] || activeTracks[i].classId != det.classId) continue;
+        float iou = calculateIoU(det.box, activeTracks[i].box);
+        if (iou > bestIoU && iou > IOU_THRESHOLD) {
+          bestIoU = iou;
+          bestIdx = i;
+        }
+      }
+
+      if (bestIdx >= 0) {
+        // Update existing track
+        matched[bestIdx] = true;
+        activeTracks[bestIdx].box = det.box;
+        activeTracks[bestIdx].missCount = 0;
+        
+        if (det.classId == 0) { // Ripe (Grade A,B,C)
+          cv::Rect safeBox = det.box & cv::Rect(0, 0, frame.cols, frame.rows);
+          if (safeBox.width >= Thresholds::MIN_BOX_SIZE && safeBox.height >= Thresholds::MIN_BOX_SIZE) {
+            MangosteenAnalyzer::Result instRes = MangosteenAnalyzer::analyze(frame(safeBox), det.confidence);
+            if (instRes.isValid) {
+              // Record previous grade to check if it changed (though usually we don't count twice, 
+              // but to handle counting correctly we only count when NEW fruit appears)
+              activeTracks[bestIdx].addHistory(instRes);
+            }
+          }
+        }
+        nextTracks.push_back(activeTracks[bestIdx]);
+      } else {
+        // Create NEW track
+        TrackedFruit newFruit;
+        newFruit.id = nextId++;
+        newFruit.box = det.box;
+        newFruit.classId = det.classId;
+        newFruit.missCount = 0;
+
+        if (det.classId == 1) { // Unripe is D immediately
+          newFruit.smoothedResult.grade = 'D';
+          newFruit.smoothedResult.isValid = true;
+          if (countD) (*countD)++;
+        } else {
+          cv::Rect safeBox = det.box & cv::Rect(0, 0, frame.cols, frame.rows);
+          if (safeBox.width >= Thresholds::MIN_BOX_SIZE && safeBox.height >= Thresholds::MIN_BOX_SIZE) {
+            MangosteenAnalyzer::Result instRes = MangosteenAnalyzer::analyze(frame(safeBox), det.confidence);
+            if(instRes.isValid){
+               newFruit.addHistory(instRes);
+               // ONLY count when a new fruit appears
+               if(newFruit.smoothedResult.grade == 'A' && countA) (*countA)++;
+               else if(newFruit.smoothedResult.grade == 'B' && countB) (*countB)++;
+               else if(newFruit.smoothedResult.grade == 'C' && countC) (*countC)++;
+            } else {
+               newFruit.smoothedResult.isValid = false; // invalid guard
+               newFruit.smoothedResult.debugText = instRes.debugText;
+            }
+          } else {
+             newFruit.smoothedResult.isValid = false;
+          }
+        }
+        nextTracks.push_back(newFruit);
+      }
+    }
+
+    // Keep unmatched tracks alive for a bit (solves flickering visibility)
+    for (size_t i = 0; i < activeTracks.size(); i++) {
+      if (!matched[i]) {
+        activeTracks[i].missCount++;
+        if (activeTracks[i].missCount < MAX_MISS_COUNT) {
+          nextTracks.push_back(activeTracks[i]);
+        }
+      }
+    }
+
+    activeTracks = nextTracks;
+    return activeTracks;
   }
 };
 
