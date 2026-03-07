@@ -313,24 +313,17 @@ private:
                   cv::FONT_HERSHEY_SIMPLEX, 0.55, boxColor, 2);
 
       // ── ใต้ box: ค่า Threshold แต่ละขั้น ────────────────────
-      // บรรทัดที่ 1: Ripeness + Roughness + Blemish
+      // แสดงเปอร์เซ็นต์ของแต่ละ Stage
       char line1[80];
-      snprintf(line1, sizeof(line1), "Ripe:%.2f(>0.5) Rgh:%.1f(<%.0f)",
-               res.ripenessScore, res.roughness,
-               (res.grade == 'A') ? Thresholds::ROUGHNESS_A
-                                  : Thresholds::ROUGHNESS_B);
+      snprintf(line1, sizeof(line1), "Grn:%.0f%% Pnk:%.0f%% Red:%.0f%%",
+               res.stagePct[0], res.stagePct[1], res.stagePct[2]);
       cv::putText(frame, line1,
                   cv::Point(det.box.x, det.box.y + det.box.height + 14),
                   cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
 
-      // บรรทัดที่ 2: Blemish + FinalScore
       char line2[80];
-      snprintf(line2, sizeof(line2), "Blm:%.1f%%(<%.0f%%) Sc:%.1f(>%.0f)",
-               res.blemishPercent,
-               (res.grade == 'A') ? Thresholds::BLEMISH_PCT_A
-                                  : Thresholds::BLEMISH_PCT_B,
-               res.finalScore,
-               (res.grade == 'A') ? Thresholds::SCORE_A : Thresholds::SCORE_B);
+      snprintf(line2, sizeof(line2), "Pur:%.0f%% Blk:%.0f%% (S%d)",
+               res.stagePct[3], res.stagePct[4], res.dominantStage);
       cv::putText(frame, line2,
                   cv::Point(det.box.x, det.box.y + det.box.height + 28),
                   cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
