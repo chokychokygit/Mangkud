@@ -322,38 +322,38 @@ private:
 
   // ── Helper: แปลง Mat → Bitmap → PictureBox ─────────────────────
   void displayFrame(cv::Mat &frame) {
-    // Convert BGR -> RGB and copy row-by-row to respect Bitmap stride/padding
-    cv::Mat rgb;
+    // GDI+ Format24bppRgb expects BGR bytes in memory, so we keep it BGR
+    cv::Mat bgr;
     if (frame.channels() == 3) {
-      cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
+      bgr = frame;
     } else if (frame.channels() == 4) {
-      cv::cvtColor(frame, rgb, cv::COLOR_BGRA2RGB);
+      cv::cvtColor(frame, bgr, cv::COLOR_BGRA2BGR);
     } else {
       // fallback: use single-channel converted to 3-channel
-      cv::cvtColor(frame, rgb, cv::COLOR_GRAY2RGB);
+      cv::cvtColor(frame, bgr, cv::COLOR_GRAY2BGR);
     }
-    //cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
+    
     System::Drawing::Bitmap ^ bmp = gcnew System::Drawing::Bitmap(
-        rgb.cols, rgb.rows,
+        bgr.cols, bgr.rows,
         System::Drawing::Imaging::PixelFormat::Format24bppRgb);
 
-    System::Drawing::Rectangle rect(0, 0, rgb.cols, rgb.rows);
+    System::Drawing::Rectangle rect(0, 0, bgr.cols, bgr.rows);
     System::Drawing::Imaging::BitmapData ^ bmpData =
         bmp->LockBits(rect, System::Drawing::Imaging::ImageLockMode::WriteOnly,
                       System::Drawing::Imaging::PixelFormat::Format24bppRgb);
 
     unsigned char *dest = (unsigned char *)bmpData->Scan0.ToPointer();
-    const unsigned char *src = rgb.data;
+    const unsigned char *src = bgr.data;
     int destStride = bmpData->Stride;
-    size_t srcStep = rgb.step[0];
-    int rowBytes = rgb.cols * rgb.elemSize();
+    size_t srcStep = bgr.step[0];
+    int rowBytes = bgr.cols * bgr.elemSize();
 
     if (rowBytes == destStride) {
       // contiguous block copy
-      memcpy(dest, src, (size_t)rowBytes * rgb.rows);
+      memcpy(dest, src, (size_t)rowBytes * bgr.rows);
     } else {
       // copy row by row honoring stride
-      for (int y = 0; y < rgb.rows; y++) {
+      for (int y = 0; y < bgr.rows; y++) {
         memcpy(dest + (size_t)y * destStride, src + (size_t)y * srcStep,
                (size_t)rowBytes);
       }
