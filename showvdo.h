@@ -33,7 +33,7 @@ namespace Mangkudd {
 			InitializeComponent();
 			video = new cv::VideoCapture();
 			try {
-				net = new cv::dnn::Net(cv::dnn::readNetFromONNX("C:\\Users\\ASUS\\Downloads\\best.onnx"));
+				net = new cv::dnn::Net(cv::dnn::readNetFromONNX("best.onnx"));
 				net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
 				net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 			}
@@ -77,59 +77,85 @@ namespace Mangkudd {
 			this->pictureBox1 = (gcnew System::Windows::Forms::PictureBox());
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->BeginInit();
 			this->SuspendLayout();
-
-			this->gradeA->Location = System::Drawing::Point(784, 109);
-			this->gradeA->Size = System::Drawing::Size(170, 22);
-			this->gradeA->Text = L"Grade A: 0";
-			this->gradeA->ReadOnly = true;
+			// 
+			// gradeA
+			// 
 			this->gradeA->BackColor = System::Drawing::Color::LightGreen;
-
-			this->gradeB->Location = System::Drawing::Point(784, 160);
-			this->gradeB->Size = System::Drawing::Size(170, 22);
-			this->gradeB->Text = L"Grade B: 0";
-			this->gradeB->ReadOnly = true;
+			this->gradeA->Location = System::Drawing::Point(784, 109);
+			this->gradeA->Name = L"gradeA";
+			this->gradeA->ReadOnly = true;
+			this->gradeA->Size = System::Drawing::Size(170, 22);
+			this->gradeA->TabIndex = 3;
+			this->gradeA->Text = L"Grade A: 0";
+			// 
+			// gradeB
+			// 
 			this->gradeB->BackColor = System::Drawing::Color::LightYellow;
-
-			this->gradeC->Location = System::Drawing::Point(784, 211);
-			this->gradeC->Size = System::Drawing::Size(170, 22);
-			this->gradeC->Text = L"Grade C: 0";
-			this->gradeC->ReadOnly = true;
+			this->gradeB->Location = System::Drawing::Point(784, 160);
+			this->gradeB->Name = L"gradeB";
+			this->gradeB->ReadOnly = true;
+			this->gradeB->Size = System::Drawing::Size(170, 22);
+			this->gradeB->TabIndex = 2;
+			this->gradeB->Text = L"Grade B: 0";
+			// 
+			// gradeC
+			// 
 			this->gradeC->BackColor = System::Drawing::Color::LightSalmon;
-
-			this->gradeD->Location = System::Drawing::Point(784, 262);
-			this->gradeD->Size = System::Drawing::Size(170, 22);
-			this->gradeD->Text = L"Grade D: 0";
-			this->gradeD->ReadOnly = true;
+			this->gradeC->Location = System::Drawing::Point(784, 211);
+			this->gradeC->Name = L"gradeC";
+			this->gradeC->ReadOnly = true;
+			this->gradeC->Size = System::Drawing::Size(170, 22);
+			this->gradeC->TabIndex = 1;
+			this->gradeC->Text = L"Grade C: 0";
+			// 
+			// gradeD
+			// 
 			this->gradeD->BackColor = System::Drawing::Color::LightGray;
-
+			this->gradeD->Location = System::Drawing::Point(784, 262);
+			this->gradeD->Name = L"gradeD";
+			this->gradeD->ReadOnly = true;
+			this->gradeD->Size = System::Drawing::Size(170, 22);
+			this->gradeD->TabIndex = 0;
+			this->gradeD->Text = L"Grade D: 0";
+			// 
+			// pusebutton
+			// 
 			this->pusebutton->Location = System::Drawing::Point(162, 32);
+			this->pusebutton->Name = L"pusebutton";
 			this->pusebutton->Size = System::Drawing::Size(75, 30);
-			this->pusebutton->Text = L"Pause";
 			this->pusebutton->TabIndex = 6;
-			this->pusebutton->Click += gcnew EventHandler(this, &showvdo::pusebutton_Click_1);
-
+			this->pusebutton->Text = L"Pause";
+			// 
+			// return_main
+			// 
 			this->return_main->Location = System::Drawing::Point(30, 32);
+			this->return_main->Name = L"return_main";
 			this->return_main->Size = System::Drawing::Size(75, 30);
-			this->return_main->Text = L"Return";
 			this->return_main->TabIndex = 7;
-			this->return_main->Click += gcnew EventHandler(this, &showvdo::button1_Click_1);
-
+			this->return_main->Text = L"Return";
+			// 
+			// openvdofile
+			// 
 			this->openvdofile->Location = System::Drawing::Point(309, 32);
+			this->openvdofile->Name = L"openvdofile";
 			this->openvdofile->Size = System::Drawing::Size(90, 30);
-			this->openvdofile->Text = L"Open VDO";
 			this->openvdofile->TabIndex = 5;
-			this->openvdofile->Click += gcnew EventHandler(this, &showvdo::openvdofile_Click);
-
+			this->openvdofile->Text = L"Open VDO";
+			// 
+			// pictureBox1
+			// 
 			this->pictureBox1->BackColor = System::Drawing::Color::Black;
 			this->pictureBox1->Location = System::Drawing::Point(12, 84);
+			this->pictureBox1->Name = L"pictureBox1";
 			this->pictureBox1->Size = System::Drawing::Size(766, 538);
 			this->pictureBox1->SizeMode = System::Windows::Forms::PictureBoxSizeMode::Zoom;
 			this->pictureBox1->TabIndex = 4;
 			this->pictureBox1->TabStop = false;
-
+			// 
+			// showvdo
+			// 
 			this->BackColor = System::Drawing::SystemColors::ActiveCaption;
 			this->ClientSize = System::Drawing::Size(989, 634);
-			this->Text = L"Mangosteen Grading Pro";
 			this->Controls->Add(this->gradeD);
 			this->Controls->Add(this->gradeC);
 			this->Controls->Add(this->gradeB);
@@ -138,9 +164,13 @@ namespace Mangkudd {
 			this->Controls->Add(this->openvdofile);
 			this->Controls->Add(this->pusebutton);
 			this->Controls->Add(this->return_main);
+			this->Name = L"showvdo";
+			this->Text = L"Mangosteen Grading Pro";
+			this->Load += gcnew System::EventHandler(this, &showvdo::showvdo_Load);
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->EndInit();
 			this->ResumeLayout(false);
 			this->PerformLayout();
+
 		}
 #pragma endregion
 
@@ -316,6 +346,8 @@ namespace Mangkudd {
 		if (video->isOpened()) video->release();
 		this->Close();
 	}
-	};
+	private: System::Void showvdo_Load(System::Object^ sender, System::EventArgs^ e) {
+	}
+};
 
 } // namespace Mangkudd
