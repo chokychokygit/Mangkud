@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <VCProjectVersion>18.0</VCProjectVersion>
     <ProjectGuid>{827A5EB7-B9B3-214C-129D-D58E6D78FCE8}</ProjectGuid>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
@@ -117,12 +118,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="camera.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="mainmenu.cpp" />
-    <ClCompile Include="showvdo.cpp" />
+    <ClCompile Include="FruitProject.cpp" />
+    <ClCompile Include="pch.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="NetMQ">
+      <HintPath>..\GetDLL\bin\Release\NetMQ.dll</HintPath>
+    </Reference>
+    <Reference Include="netstandard" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\GetDLL\bin\Release\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenCvSharp">
+      <HintPath>..\GetDLL\bin\Release\OpenCvSharp.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -130,27 +139,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="camera.h">
+    <ClInclude Include="pch.h">
       <FileType>CppForm</FileType>
     </ClInclude>
-    <ClInclude Include="mainmenu.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
-    <ClInclude Include="mangosteen_core.h" />
-    <ClInclude Include="showvdo.h">
-      <FileType>CppForm</FileType>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="camera.resx">
-      <DependentUpon>camera.h</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="mainmenu.resx">
-      <DependentUpon>mainmenu.h</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="showvdo.resx">
-      <DependentUpon>showvdo.h</DependentUpon>
-    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

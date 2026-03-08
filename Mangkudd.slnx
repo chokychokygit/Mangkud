@@ -1,7 +1,9 @@
 <Solution>
   <Configurations>
+    <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="../GetDLL/GetDLL.csproj" Id="ae106909-ac46-40cc-b125-7f9cc56f8604" />
   <Project Path="Mangkudd.vcxproj" />
 </Solution>

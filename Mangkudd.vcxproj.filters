@@ -27,18 +27,27 @@
     <ClCompile Include="showvdo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FruitProject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mainmenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="camera.h">
+    <ClInclude Include="mangosteen_core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="camera_temp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="showvdo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="mangosteen_core.h">
+    <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
