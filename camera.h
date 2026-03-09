@@ -1,13 +1,9 @@
-#pragma once
+﻿#pragma once
 // ================================================================
-//  camera.h  (v3)
-//  ���:
-//  1. �ʴ��Ҿ�ջ���: �� Mat.data �µç��ҹ Bitmap scan (BGRPixelFormat)
-//     �����ŧ�������ǵ͹ display ��ҹ�� ����ŧ���
-//  2. Thresholds �� member �ͧ class  ������ҡ TrackBar/NumericUpDown
-//  3. ����ᶺ Settings Panel ��ҹ��ҧ����Ѻ��Ѻ threshold ��ѡ
+//  camera.h  (Refactored for YOLO ZeroMQ Integration)
 // ================================================================
 #include "mangosteen_core.h"
+
 
 namespace Mangkudd {
 
@@ -16,47 +12,43 @@ using namespace System::Windows::Forms;
 using namespace System::Drawing;
 using namespace System::ComponentModel;
 
-public
-ref class camera : public System::Windows::Forms::Form {
+public ref class camera : public System::Windows::Forms::Form {
 private:
   cv::VideoCapture *cap;
-  cv::dnn::Net *net;
+  AiClient^ aiClient;
 
   System::Windows::Forms::Timer ^ cameraTimer;
   bool isCameraRunning = false;
 
   int countA = 0, countB = 0, countC = 0, countD = 0;
   int frameCounter = 0;
-  FruitTracker* tracker;
 
 public:
   camera(void) {
     InitializeComponent();
     cap = new cv::VideoCapture();
-    try {
-      net = new cv::dnn::Net(cv::dnn::readNetFromONNX("best.onnx"));
-      net->setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-      net->setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-    } catch (...) {
-      MessageBox::Show(
-          "ไม่พบไฟล์ model ที่ C:\\Users\\ASUS\\Downloads\\best.onnx\nกรุณาตรวจสอบ "
-          "path ของไฟล์");
+    aiClient = gcnew AiClient();
+    
+    // Connect to Python AI Server
+    if (!aiClient->Connect("tcp://localhost:5555")) {
+        MessageBox::Show("ไม่สามารถเชื่อมต่อกับ Python AI Server ได้\nกรุณาเปิดไฟล์ ai_server.py ทิ้งไว้");
     }
+
     cameraTimer = gcnew System::Windows::Forms::Timer();
     cameraTimer->Interval = 33;
     cameraTimer->Tick += gcnew EventHandler(this, &camera::OnCameraTick);
-    tracker = new FruitTracker();
-    currentTracks = new std::vector<TrackedFruit>();
   }
 
-  protected:
+protected:
   ~camera() {
     if (cap && cap->isOpened())
       cap->release();
     delete cap;
-    delete net;
-    delete tracker;
-    delete currentTracks;
+    
+    if (aiClient != nullptr) {
+        aiClient->Disconnect();
+    }
+
     if (components)
       delete components;
   }
@@ -211,53 +203,30 @@ private:
 #pragma endregion
 
 private:
-  void drawDetections(cv::Mat& frame, const std::vector<TrackedFruit>& activeTracks) {
-    for (const auto &fruit : activeTracks) {
-      if (fruit.classId == 1 || fruit.smoothedResult.grade == 'D') { // Unripe or Grade D
-        cv::rectangle(frame, fruit.box, cv::Scalar(128, 128, 128), 2);
-        cv::putText(frame, "D Unripe", cv::Point(fruit.box.x, fruit.box.y - 6),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(128, 128, 128), 2);
-        continue;
-      }
-
-      if (!fruit.smoothedResult.isValid) {
-        cv::rectangle(frame, fruit.box, cv::Scalar(0, 200, 255), 1);
-        cv::putText(frame, fruit.smoothedResult.debugText, cv::Point(fruit.box.x, fruit.box.y - 6),
-                    cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(0, 200, 255), 1);
-        continue;
-      }
-
+  void drawDetections(cv::Mat& frame, const std::vector<AiResult>& results) {
+    for (const auto &res : results) {
       cv::Scalar boxColor;
       std::string label;
-      switch (fruit.smoothedResult.grade) {
-      case 'A': boxColor = cv::Scalar(0, 255, 0); label = "Grade:A"; break;
-      case 'B': boxColor = cv::Scalar(0, 255, 255); label = "Grade:B"; break;
-      default:  boxColor = cv::Scalar(0, 0, 255); label = "Grade:C"; break;
+      
+      switch (res.mappedGrade) {
+      case 'A': boxColor = cv::Scalar(0, 255, 0); label = "Grade A (" + res.grade + ")"; break;
+      case 'B': boxColor = cv::Scalar(0, 255, 255); label = "Grade B (" + res.grade + ")"; break;
+      case 'C': boxColor = cv::Scalar(0, 165, 255); label = "Grade C (" + res.grade + ")"; break;
+      case 'D': boxColor = cv::Scalar(128, 128, 128); label = "Grade D (" + res.grade + ")"; break;
+      default:  boxColor = cv::Scalar(0, 0, 255); label = "Unknown"; break;
       }
 
-      cv::rectangle(frame, fruit.box, boxColor, 2);
+      // Draw bounding box
+      cv::rectangle(frame, res.box, boxColor, 2);
 
-      char topText[60];
-      snprintf(topText, sizeof(topText), "%s", label.c_str());
-      cv::putText(frame, topText, cv::Point(fruit.box.x, fruit.box.y - 6),
-                  cv::FONT_HERSHEY_SIMPLEX, 0.55, boxColor, 2);
-
-      char line1[80];
-      snprintf(line1, sizeof(line1), "Grn:%.0f%% Pnk:%.0f%% Red:%.0f%%",
-               fruit.smoothedResult.stagePct[0], fruit.smoothedResult.stagePct[1], fruit.smoothedResult.stagePct[2]);
-      cv::putText(frame, line1, cv::Point(fruit.box.x, fruit.box.y + fruit.box.height + 14),
-                  cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
-
-      char line2[80];
-      snprintf(line2, sizeof(line2), "Pur:%.0f%% Blk:%.0f%% (S%d)",
-               fruit.smoothedResult.stagePct[3], fruit.smoothedResult.stagePct[4], fruit.smoothedResult.dominantStage);
-      cv::putText(frame, line2, cv::Point(fruit.box.x, fruit.box.y + fruit.box.height + 28),
-                  cv::FONT_HERSHEY_SIMPLEX, 0.38, boxColor, 1);
+      // Draw Label
+      char displayTxt[100];
+      snprintf(displayTxt, sizeof(displayTxt), "ID:%d %s", res.id, label.c_str());
+      
+      cv::putText(frame, displayTxt, cv::Point(res.box.x, (std::max)(20, res.box.y - 10)),
+                  cv::FONT_HERSHEY_SIMPLEX, 0.7, boxColor, 2);
     }
   }
-
-  private:
-  std::vector<TrackedFruit>* currentTracks;
 
   System::Void OnCameraTick(System::Object ^ sender, System::EventArgs ^ e) {
     if (!isCameraRunning || !cap || !cap->isOpened())
@@ -268,50 +237,25 @@ private:
       return;
 
     frameCounter++;
-    if (frameCounter % 3 != 0) {
-      if(currentTracks) drawDetections(frame, *currentTracks);
-      // resize ให้พอดี PictureBox เช่นเดียวกับ inference path
-      cv::Mat skipDisp;
-      if (this->camerashow->Width > 0 && this->camerashow->Height > 0)
-        cv::resize(frame, skipDisp, cv::Size(this->camerashow->Width, this->camerashow->Height));
-      else
-        skipDisp = frame;
-      displayFrame(skipDisp);
-      return;
+    
+    // Process frame with ZeroMQ every 3 frames for performance
+    if (frameCounter % 3 == 0) {
+        std::vector<AiResult> results;
+        int prevA = countA, prevB = countB, prevC = countC, prevD = countD;
+        
+        // Pass frame to the Python Server via ZeroMQ
+        if (aiClient->ProcessFrame(frame, results, countA, countB, countC, countD)) {
+            // Update UI Labels 
+            lblGradeA->Text = "Grade A: " + countA.ToString();
+            lblGradeB->Text = "Grade B: " + countB.ToString();
+            lblGradeC->Text = "Grade C: " + countC.ToString();
+            lblGradeD->Text = "Grade D: " + countD.ToString();
+            
+            drawDetections(frame, results);
+        }
     }
 
-    // ── ไม่มี model: แสดง frame ดิบ ──────────────────────────────
-    if (!net) {
-      displayFrame(frame);
-      return;
-    }
-
-    // ── YOLO inference (use smaller input for speed) ──────────────
-    cv::Mat blob =
-        cv::dnn::blobFromImage(frame, 1.0 / 255.0, cv::Size(640, 640),
-                               cv::Scalar(0, 0, 0), true, false);
-    net->setInput(blob);
-
-    std::vector<cv::Mat> outputs;
-    net->forward(outputs, net->getUnconnectedOutLayersNames());
-
-    auto detections = YoloParser::parse(outputs, frame.cols, frame.rows);
-
-    if(tracker && currentTracks) {
-        // countA..countD are fields of a ref class (managed); take addresses of native temporaries
-        int nA = countA, nB = countB, nC = countC, nD = countD;
-        *currentTracks = tracker->update(detections, frame, &nA, &nB, &nC, &nD);
-        // copy results back to managed fields
-        countA = nA; countB = nB; countC = nC; countD = nD;
-    }
-
-    lblGradeA->Text = "Grade A: " + countA.ToString();
-    lblGradeB->Text = "Grade B: " + countB.ToString();
-    lblGradeC->Text = "Grade C: " + countC.ToString();
-    lblGradeD->Text = "Grade D: " + countD.ToString();
-
-    if(currentTracks) drawDetections(frame, *currentTracks);
-
+    // Resize and Render
     cv::Mat dispFinal;
     if (this->camerashow->Width > 0 && this->camerashow->Height > 0)
       cv::resize(frame, dispFinal, cv::Size(this->camerashow->Width, this->camerashow->Height));
@@ -377,8 +321,7 @@ private:
         cap->release();
       if (cap->open(0)) {
         isCameraRunning = true;
-        if(tracker) tracker->reset();
-        if(currentTracks) currentTracks->clear();
+        countA = countB = countC = countD = 0;
         cameraTimer->Start();
         startbutton->Text = L"STOP";
         startbutton->BackColor = System::Drawing::Color::Tomato;
@@ -403,8 +346,6 @@ private:
   System::Void btnReset_Click(System::Object ^ sender, System::EventArgs ^ e) {
     countA = countB = countC = countD = 0;
     frameCounter = 0;
-    if(tracker) tracker->reset();
-    if(currentTracks) currentTracks->clear();
     lblGradeA->Text = "Grade A: 0";
     lblGradeB->Text = "Grade B: 0";
     lblGradeC->Text = "Grade C: 0";

@@ -120,6 +120,10 @@
   <ItemGroup>
     <ClCompile Include="FruitProject.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="camera.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="mainmenu.cpp" />
+    <ClCompile Include="showvdo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="NetMQ">
@@ -142,8 +146,25 @@
     <ClInclude Include="pch.h">
       <FileType>CppForm</FileType>
     </ClInclude>
+    <ClInclude Include="camera.h">
+      <FileType>CppForm</FileType>
+    </ClInclude>
+    <ClInclude Include="mainmenu.h">
+      <FileType>CppForm</FileType>
+    </ClInclude>
+    <ClInclude Include="mangosteen_core.h" />
+    <ClInclude Include="showvdo.h">
+      <FileType>CppForm</FileType>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="mainmenu.resx">
+      <DependentUpon>mainmenu.h</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+
+

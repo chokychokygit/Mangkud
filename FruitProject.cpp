@@ -6,7 +6,7 @@ using namespace NetMQ::Sockets;
 using namespace OpenCvSharp;
 using namespace Newtonsoft::Json::Linq;
 
-void Main(array<System::String^>^ args)
+void FruitProject_Main_Deprecated(array<System::String^>^ args)
 {
     Console::WriteLine("🖥️ กำลังเริ่มระบบ Frontend ด้วย C++ .NET...");
 
