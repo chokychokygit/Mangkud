@@ -48,41 +48,56 @@ class MangosteenAI:
         return output_data
 
 # ===================================================================
-# ส่วนที่ 2: ระบบเซิร์ฟเวอร์เปิดท่อส่งข้อมูล (ZeroMQ)
+# ส่วนที่ 2: ระบบเซิร์ฟเวอร์เปิดท่อส่งข้อมูล (ZeroMQ PUB/SUB)
 # ===================================================================
 def start_zmq_server():
-    print("🧠 กำลังเตรียมเปิดท่อรับส่งข้อมูล...")
+    print("🧠 กำลังเตรียมเปิดท่อรับส่งข้อมูล (PUB/SUB)...")
     
     # โหลดโมเดล (ตรวจสอบชื่อไฟล์ให้ตรงกับที่คุณเซฟไว้นะครับ)
     ai = MangosteenAI("best_mangosteen_yolo26s.pt", "grade_mangosteen_best.pt")
 
-    # สร้างท่อ ZeroMQ แบบรอรับคำสั่ง (REP)
     context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.bind("tcp://*:5555") # เปิดพอร์ต 5555 รอกลางอากาศ
+    
+    # สร้างท่อรับภาพ (SUB) รอรับจาก C++ Publisher
+    sub_socket = context.socket(zmq.SUB)
+    sub_socket.bind("tcp://*:5555") 
+    sub_socket.setsockopt_string(zmq.SUBSCRIBE, "") # รับทุกภาพที่ส่งมาแบบไม่กรอง
+    
+    # สร้างท่อกระจายเสียง (PUB) เพื่อประกาศเกรดและพิกัดให้ C++ Subscriber
+    pub_socket = context.socket(zmq.PUB)
+    pub_socket.bind("tcp://*:5556")
 
-    print("🟢 Python AI Server เปิดทำงานแล้ว! รอรับรูปภาพจาก C++ ผ่านพอร์ต 5555...")
+    print("🟢 Python AI Server เปิดทำงานแบบสายพานแล้ว!")
+    print("   - รอรับรูปภาพ (SUB) ที่พอร์ต 5555")
+    print("   - กระจายผลลัพธ์ (PUB) ที่พอร์ต 5556")
 
     while True:
         try:
-            # 1. รอรับไฟล์ภาพที่ฝั่งหน้าบ้าน (C++) ส่งมา
-            message = socket.recv()
+            # 1. รอรับไฟล์ภาพที่ฝั่งหน้าบ้าน (C++) ส่งมาแบบต่อเนื่อง
+            # ถ้ามีภาพค้างในคิวเยอะๆ ให้ดึงแต่ภาพล่าสุดทิ้งภาพเก่า (แต่ถ้าดึงวนไวพอก็ไม่ล้น)
+            message = sub_socket.recv()
+            
+            # ล้างคิว (Flush) เอาเฉพาะภาพล่าสุดเพื่อการทำงานแบบ Real-time แท้จริง
+            while True:
+                try:
+                    message = sub_socket.recv(zmq.NOBLOCK)
+                except zmq.Again:
+                    break # คิวว่างแล้ว เอา message ชิ้นสุดท้ายนี้แหละไปรัน AI
             
             # 2. แปลงข้อมูลไบต์ให้กลับมาเป็นรูปภาพ
             nparr = np.frombuffer(message, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            # 3. ส่งภาพเข้าสมองกล AI ด้านบน
-            results = ai.process_frame(frame)
+            if frame is not None:
+                # 3. ส่งภาพเข้าสมองกล AI ด้านบน
+                results = ai.process_frame(frame)
 
-            # 4. แปลงผลลัพธ์เป็นข้อความ JSON แล้วส่งกลับลงท่อ
-            json_data = json.dumps(results)
-            socket.send_string(json_data)
+                # 4. แปลงผลลัพธ์เป็นข้อความ JSON แล้วกระจายออกโทรโข่ง (PUB)
+                json_data = json.dumps(results)
+                pub_socket.send_string(json_data)
 
         except Exception as e:
             print("เกิดข้อผิดพลาด:", e)
-            # ถ้ามี Error ก็ส่ง Error กลับไป C++ จะได้ไม่ค้าง
-            socket.send_string(json.dumps({"error": str(e)}))
 
 # สั่งให้โปรแกรมเริ่มทำงาน
 if __name__ == '__main__':

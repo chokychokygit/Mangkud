@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 // ================================================================
 //  showvdo.h  (Refactored for YOLO ZeroMQ Integration)
 // ================================================================
@@ -31,7 +31,7 @@ public:
     
     // Connect to Python AI Server
     if (!aiClient->Connect("tcp://localhost:5555")) {
-        MessageBox::Show("ไม่สามารถเชื่อมต่อกับ Python AI Server ได้\nกรุณาเปิดไฟล์ ai_server.py ทิ้งไว้");
+        MessageBox::Show(L"ไม่สามารถเชื่อมต่อกับ Python AI Server ได้\nกรุณาเปิดไฟล์ ai_server.py ทิ้งไว้", L"ข้อผิดพลาด", MessageBoxButtons::OK, MessageBoxIcon::Error);
     }
 
     videoTimer = gcnew System::Windows::Forms::Timer();
@@ -250,6 +250,7 @@ private:
     if (oldImg != nullptr)
       delete oldImg;
   }
+  std::vector<AiResult>* lastResults = new std::vector<AiResult>();
 
   System::Void OnVideoTick(System::Object ^ sender, EventArgs ^ e) {
     if (isPaused || !video->isOpened())
@@ -263,22 +264,25 @@ private:
 
     frameCounter++;
     
-    // Process frame with ZeroMQ every 3 frames for performance
-    if (frameCounter % 3 == 0) {
-        std::vector<AiResult> results;
-        int prevA = countA, prevB = countB, prevC = countC, prevD = countD;
-        
-        // Pass frame to the Python Server via ZeroMQ
-        if (aiClient->ProcessFrame(frame, results, countA, countB, countC, countD)) {
-            // Update UI Labels 
-            gradeA->Text = "Grade A: " + countA.ToString();
-            gradeB->Text = "Grade B: " + countB.ToString();
-            gradeC->Text = "Grade C: " + countC.ToString();
-            gradeD->Text = "Grade D: " + countD.ToString();
-            
-            drawDetections(frame, results);
-        }
+    // SEND frame async continuously
+    if (frameCounter % 2 == 0) {
+        aiClient->SendFrameAsync(frame);
     }
+
+    // RECEIVE results non-blockingly
+    std::vector<AiResult> currentResults;
+    if (aiClient->TryReceiveResult(currentResults, countA, countB, countC, countD, frame.cols)) {
+        *lastResults = currentResults;
+        
+        // Update UI Labels 
+        gradeA->Text = "Grade A: " + countA.ToString();
+        gradeB->Text = "Grade B: " + countB.ToString();
+        gradeC->Text = "Grade C: " + countC.ToString();
+        gradeD->Text = "Grade D: " + countD.ToString();
+    }
+    
+    // Always draw bounding boxes of last known state
+    drawDetections(frame, *lastResults);
 
     // resize ให้พอดี PictureBox แล้วแสดงด้วย displayFrame()
     cv::Mat disp;
@@ -318,7 +322,7 @@ private:
         pusebutton->Text = L"Pause";
         videoTimer->Start();
       } else {
-        MessageBox::Show("ไม่สามารถเปิดไฟล์วิดีโอได้\nลองใช้ไฟล์ .mp4 หรือ .avi");
+        MessageBox::Show(L"ไม่สามารถเปิดไฟล์วิดีโอได้\nลองใช้ไฟล์ .mp4 หรือ .avi", L"ข้อผิดพลาด", MessageBoxButtons::OK, MessageBoxIcon::Error);
       }
     }
   }
