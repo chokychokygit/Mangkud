@@ -4,6 +4,7 @@
 // ================================================================
 #include <string>
 #include <vector>
+#include <set>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -30,14 +31,23 @@ namespace Mangkudd {
     private:
         NetMQ::Sockets::RequestSocket^ client;
         bool isConnected;
+        std::set<int>* countedIds;
 
     public:
         AiClient() {
             isConnected = false;
+            countedIds = new std::set<int>();
         }
 
         ~AiClient() {
             Disconnect();
+            delete countedIds;
+        }
+
+        void ResetCounters() {
+            if (countedIds) {
+                countedIds->clear();
+            }
         }
 
         bool Connect(System::String^ address) {
@@ -48,6 +58,7 @@ namespace Mangkudd {
             }
             catch (...) {
                 isConnected = false;
+            countedIds = new std::set<int>();
                 return false;
             }
         }
@@ -58,6 +69,7 @@ namespace Mangkudd {
                 delete client;
                 client = nullptr;
                 isConnected = false;
+            countedIds = new std::set<int>();
             }
         }
 
