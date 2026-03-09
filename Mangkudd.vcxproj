@@ -159,13 +159,17 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="camera.resx">
+      <DependentUpon>camera.h</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="mainmenu.resx">
       <DependentUpon>mainmenu.h</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="showvdo.resx">
+      <DependentUpon>showvdo.h</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
-
-

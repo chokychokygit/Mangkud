@@ -21,7 +21,9 @@ private:
   bool isPaused = false;
 
   int countA = 0, countB = 0, countC = 0, countD = 0;
-  int frameCounter = 0;
+private: System::Windows::Forms::Button^ button1;
+private: System::Windows::Forms::Button^ importcsv2;
+       int frameCounter = 0;
 
 public:
   showvdo(void) {
@@ -65,120 +67,135 @@ private:
 
 #pragma region Windows Form Designer generated code
   void InitializeComponent(void) {
-    this->gradeA = (gcnew System::Windows::Forms::TextBox());
-    this->gradeB = (gcnew System::Windows::Forms::TextBox());
-    this->gradeC = (gcnew System::Windows::Forms::TextBox());
-    this->gradeD = (gcnew System::Windows::Forms::TextBox());
-    this->pusebutton = (gcnew System::Windows::Forms::Button());
-    this->return_main = (gcnew System::Windows::Forms::Button());
-    this->openvdofile = (gcnew System::Windows::Forms::Button());
-    this->pictureBox1 = (gcnew System::Windows::Forms::PictureBox());
-    (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(
-         this->pictureBox1))
-        ->BeginInit();
-    this->SuspendLayout();
-    //
-    // gradeA
-    //
-    this->gradeA->BackColor = System::Drawing::Color::LightGreen;
-    this->gradeA->Location = System::Drawing::Point(784, 109);
-    this->gradeA->Name = L"gradeA";
-    this->gradeA->ReadOnly = true;
-    this->gradeA->Size = System::Drawing::Size(170, 22);
-    this->gradeA->TabIndex = 3;
-    this->gradeA->Text = L"Grade A: 0";
-    //
-    // gradeB
-    //
-    this->gradeB->BackColor = System::Drawing::Color::LightYellow;
-    this->gradeB->Location = System::Drawing::Point(784, 160);
-    this->gradeB->Name = L"gradeB";
-    this->gradeB->ReadOnly = true;
-    this->gradeB->Size = System::Drawing::Size(170, 22);
-    this->gradeB->TabIndex = 2;
-    this->gradeB->Text = L"Grade B: 0";
-    //
-    // gradeC
-    //
-    this->gradeC->BackColor = System::Drawing::Color::LightSalmon;
-    this->gradeC->Location = System::Drawing::Point(784, 211);
-    this->gradeC->Name = L"gradeC";
-    this->gradeC->ReadOnly = true;
-    this->gradeC->Size = System::Drawing::Size(170, 22);
-    this->gradeC->TabIndex = 1;
-    this->gradeC->Text = L"Grade C: 0";
-    //
-    // gradeD
-    //
-    this->gradeD->BackColor = System::Drawing::Color::LightGray;
-    this->gradeD->Location = System::Drawing::Point(784, 262);
-    this->gradeD->Name = L"gradeD";
-    this->gradeD->ReadOnly = true;
-    this->gradeD->Size = System::Drawing::Size(170, 22);
-    this->gradeD->TabIndex = 0;
-    this->gradeD->Text = L"Grade D: 0";
-    //
-    // pusebutton
-    //
-    this->pusebutton->Location = System::Drawing::Point(162, 32);
-    this->pusebutton->Name = L"pusebutton";
-    this->pusebutton->Size = System::Drawing::Size(75, 30);
-    this->pusebutton->TabIndex = 6;
-    this->pusebutton->Text = L"Pause";
-    this->pusebutton->Click +=
-        gcnew System::EventHandler(this, &showvdo::pusebutton_Click_1);
-    //
-    // return_main
-    //
-    this->return_main->Location = System::Drawing::Point(30, 32);
-    this->return_main->Name = L"return_main";
-    this->return_main->Size = System::Drawing::Size(75, 30);
-    this->return_main->TabIndex = 7;
-    this->return_main->Text = L"Return";
-    this->return_main->Click +=
-        gcnew System::EventHandler(this, &showvdo::button1_Click_1);
-    //
-    // openvdofile
-    //
-    this->openvdofile->Location = System::Drawing::Point(309, 32);
-    this->openvdofile->Name = L"openvdofile";
-    this->openvdofile->Size = System::Drawing::Size(90, 30);
-    this->openvdofile->TabIndex = 5;
-    this->openvdofile->Text = L"Open VDO";
-    this->openvdofile->Click +=
-        gcnew System::EventHandler(this, &showvdo::openvdofile_Click);
-    //
-    // pictureBox1
-    //
-    this->pictureBox1->BackColor = System::Drawing::Color::Black;
-    this->pictureBox1->Location = System::Drawing::Point(12, 84);
-    this->pictureBox1->Name = L"pictureBox1";
-    this->pictureBox1->Size = System::Drawing::Size(766, 538);
-    this->pictureBox1->SizeMode =
-        System::Windows::Forms::PictureBoxSizeMode::Zoom;
-    this->pictureBox1->TabIndex = 4;
-    this->pictureBox1->TabStop = false;
-    //
-    // showvdo
-    //
-    this->BackColor = System::Drawing::SystemColors::ActiveCaption;
-    this->ClientSize = System::Drawing::Size(989, 634);
-    this->Controls->Add(this->gradeD);
-    this->Controls->Add(this->gradeC);
-    this->Controls->Add(this->gradeB);
-    this->Controls->Add(this->gradeA);
-    this->Controls->Add(this->pictureBox1);
-    this->Controls->Add(this->openvdofile);
-    this->Controls->Add(this->pusebutton);
-    this->Controls->Add(this->return_main);
-    this->Name = L"showvdo";
-    this->Text = L"Mangosteen Grading Pro";
-    this->Load += gcnew System::EventHandler(this, &showvdo::showvdo_Load);
-    (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(
-         this->pictureBox1))
-        ->EndInit();
-    this->ResumeLayout(false);
-    this->PerformLayout();
+      this->gradeA = (gcnew System::Windows::Forms::TextBox());
+      this->gradeB = (gcnew System::Windows::Forms::TextBox());
+      this->gradeC = (gcnew System::Windows::Forms::TextBox());
+      this->gradeD = (gcnew System::Windows::Forms::TextBox());
+      this->pusebutton = (gcnew System::Windows::Forms::Button());
+      this->return_main = (gcnew System::Windows::Forms::Button());
+      this->openvdofile = (gcnew System::Windows::Forms::Button());
+      this->pictureBox1 = (gcnew System::Windows::Forms::PictureBox());
+      this->button1 = (gcnew System::Windows::Forms::Button());
+      this->importcsv2 = (gcnew System::Windows::Forms::Button());
+      (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->BeginInit();
+      this->SuspendLayout();
+      // 
+      // gradeA
+      // 
+      this->gradeA->BackColor = System::Drawing::Color::LightGreen;
+      this->gradeA->Location = System::Drawing::Point(784, 109);
+      this->gradeA->Name = L"gradeA";
+      this->gradeA->ReadOnly = true;
+      this->gradeA->Size = System::Drawing::Size(170, 22);
+      this->gradeA->TabIndex = 3;
+      this->gradeA->Text = L"Grade A: 0";
+      // 
+      // gradeB
+      // 
+      this->gradeB->BackColor = System::Drawing::Color::LightYellow;
+      this->gradeB->Location = System::Drawing::Point(784, 160);
+      this->gradeB->Name = L"gradeB";
+      this->gradeB->ReadOnly = true;
+      this->gradeB->Size = System::Drawing::Size(170, 22);
+      this->gradeB->TabIndex = 2;
+      this->gradeB->Text = L"Grade B: 0";
+      // 
+      // gradeC
+      // 
+      this->gradeC->BackColor = System::Drawing::Color::LightSalmon;
+      this->gradeC->Location = System::Drawing::Point(784, 211);
+      this->gradeC->Name = L"gradeC";
+      this->gradeC->ReadOnly = true;
+      this->gradeC->Size = System::Drawing::Size(170, 22);
+      this->gradeC->TabIndex = 1;
+      this->gradeC->Text = L"Grade C: 0";
+      // 
+      // gradeD
+      // 
+      this->gradeD->BackColor = System::Drawing::Color::LightGray;
+      this->gradeD->Location = System::Drawing::Point(784, 262);
+      this->gradeD->Name = L"gradeD";
+      this->gradeD->ReadOnly = true;
+      this->gradeD->Size = System::Drawing::Size(170, 22);
+      this->gradeD->TabIndex = 0;
+      this->gradeD->Text = L"Grade D: 0";
+      // 
+      // pusebutton
+      // 
+      this->pusebutton->Location = System::Drawing::Point(162, 32);
+      this->pusebutton->Name = L"pusebutton";
+      this->pusebutton->Size = System::Drawing::Size(75, 30);
+      this->pusebutton->TabIndex = 6;
+      this->pusebutton->Text = L"Pause";
+      this->pusebutton->Click += gcnew System::EventHandler(this, &showvdo::pusebutton_Click_1);
+      // 
+      // return_main
+      // 
+      this->return_main->Location = System::Drawing::Point(30, 32);
+      this->return_main->Name = L"return_main";
+      this->return_main->Size = System::Drawing::Size(75, 30);
+      this->return_main->TabIndex = 7;
+      this->return_main->Text = L"Return";
+      this->return_main->Click += gcnew System::EventHandler(this, &showvdo::button1_Click_1);
+      // 
+      // openvdofile
+      // 
+      this->openvdofile->Location = System::Drawing::Point(309, 32);
+      this->openvdofile->Name = L"openvdofile";
+      this->openvdofile->Size = System::Drawing::Size(90, 30);
+      this->openvdofile->TabIndex = 5;
+      this->openvdofile->Text = L"Open VDO";
+      this->openvdofile->Click += gcnew System::EventHandler(this, &showvdo::openvdofile_Click);
+      // 
+      // pictureBox1
+      // 
+      this->pictureBox1->BackColor = System::Drawing::Color::Black;
+      this->pictureBox1->Location = System::Drawing::Point(12, 84);
+      this->pictureBox1->Name = L"pictureBox1";
+      this->pictureBox1->Size = System::Drawing::Size(766, 538);
+      this->pictureBox1->SizeMode = System::Windows::Forms::PictureBoxSizeMode::Zoom;
+      this->pictureBox1->TabIndex = 4;
+      this->pictureBox1->TabStop = false;
+      // 
+      // button1
+      // 
+      this->button1->Location = System::Drawing::Point(442, 32);
+      this->button1->Name = L"button1";
+      this->button1->Size = System::Drawing::Size(90, 30);
+      this->button1->TabIndex = 8;
+      this->button1->Text = L"ImportDATA";
+      // 
+      // importcsv2
+      // 
+      this->importcsv2->Location = System::Drawing::Point(600, 32);
+      this->importcsv2->Name = L"importcsv2";
+      this->importcsv2->Size = System::Drawing::Size(100, 30);
+      this->importcsv2->TabIndex = 9;
+      this->importcsv2->Text = L"SAVE CSV";
+      this->importcsv2->BackColor = System::Drawing::Color::LightSkyBlue;
+      this->importcsv2->Click += gcnew System::EventHandler(this, &showvdo::importcsv2_Click);
+      // 
+      // showvdo
+      // 
+      this->BackColor = System::Drawing::SystemColors::ActiveCaption;
+      this->ClientSize = System::Drawing::Size(989, 634);
+      this->Controls->Add(this->button1);
+      this->Controls->Add(this->importcsv2);
+      this->Controls->Add(this->gradeD);
+      this->Controls->Add(this->gradeC);
+      this->Controls->Add(this->gradeB);
+      this->Controls->Add(this->gradeA);
+      this->Controls->Add(this->pictureBox1);
+      this->Controls->Add(this->openvdofile);
+      this->Controls->Add(this->pusebutton);
+      this->Controls->Add(this->return_main);
+      this->Name = L"showvdo";
+      this->Text = L"Mangosteen Grading Pro";
+      this->Load += gcnew System::EventHandler(this, &showvdo::showvdo_Load);
+      (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox1))->EndInit();
+      this->ResumeLayout(false);
+      this->PerformLayout();
+
   }
 #pragma endregion
 
@@ -348,6 +365,28 @@ private:
     if (video->isOpened())
       video->release();
     this->Close();
+  }
+
+private:
+  System::Void importcsv2_Click(System::Object ^ sender, System::EventArgs ^ e) {
+    System::Windows::Forms::SaveFileDialog^ saveFileDialog1 = gcnew System::Windows::Forms::SaveFileDialog();
+    saveFileDialog1->Filter = "CSV File|*.csv";
+    saveFileDialog1->Title = "Save Grade Log";
+    saveFileDialog1->FileName = "Mangkudd_DataLog.csv";
+    
+    if (saveFileDialog1->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+        System::String^ timestamp = System::DateTime::Now.ToString("yyyy-MM-dd HH:mm:ss");
+        System::String^ csvData = timestamp + "," + countA + "," + countB + "," + countC + "," + countD + "\n";
+        
+        System::String^ filePath = saveFileDialog1->FileName;
+        
+        if (!System::IO::File::Exists(filePath)) {
+            System::IO::File::WriteAllText(filePath, "Timestamp,Grade A,Grade B,Grade C,Grade D\n", System::Text::Encoding::UTF8);
+        }
+        
+        System::IO::File::AppendAllText(filePath, csvData, System::Text::Encoding::UTF8);
+        MessageBox::Show(L"Data exported successfully!", L"Success", MessageBoxButtons::OK, MessageBoxIcon::Information);
+    }
   }
 
 private:
