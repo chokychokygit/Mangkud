@@ -14,7 +14,7 @@ class MangosteenAI:
         self.classifier = YOLO(classifier_path)
         self.grade_memory = {} # สมุดจดจำเกรดเพื่อลดภาระการ์ดจอ
 
-    def process_frame(self, frame, conf_threshold=0.75):
+    def process_frame(self, frame, conf_threshold=0.50):
         """รับภาพ 1 เฟรมเข้ามา -> ส่งคืนพิกัดและเกรดออกไป (กรองความมั่นใจด้วย conf_threshold)"""
         # เพิ่มพารามิเตอร์ conf=conf_threshold เพื่อกรองวัตถุที่มันใจน้อยกว่าที่กำหนดทิ้ง
         results = self.detector.track(frame, persist=True, tracker="bytetrack.yaml", imgsz=640, conf=conf_threshold, verbose=False)

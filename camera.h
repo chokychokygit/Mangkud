@@ -387,26 +387,23 @@ namespace Mangkudd {
 
     private:
         System::Void importcsv_Click(System::Object^ sender, System::EventArgs^ e) {
-            System::Windows::Forms::SaveFileDialog^ saveFileDialog1 = gcnew System::Windows::Forms::SaveFileDialog();
-            saveFileDialog1->Filter = "CSV File|*.csv";
-            saveFileDialog1->Title = "Save Grade Log";
-            saveFileDialog1->FileName = "Mangkudd_DataLog.csv";
-
-            if (saveFileDialog1->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-                System::String^ timestamp = System::DateTime::Now.ToString("yyyy-MM-dd HH:mm:ss");
-                System::String^ csvData = timestamp + "," + countA + "," + countB + "," + countC + "," + countD + "\n";
-
-                System::String^ filePath = saveFileDialog1->FileName;
-
-                // Write Header if file doesn't exist
-                if (!System::IO::File::Exists(filePath)) {
-                    System::IO::File::WriteAllText(filePath, "Timestamp,Grade A,Grade B,Grade C,Grade D\n", System::Text::Encoding::UTF8);
-                }
-
-                // Append Data
-                System::IO::File::AppendAllText(filePath, csvData, System::Text::Encoding::UTF8);
-                MessageBox::Show(L"Data exported successfully!", L"Success", MessageBoxButtons::OK, MessageBoxIcon::Information);
+            System::String^ directoryPath = "C:\\vs_c_cpp_csharp\\MyFruit\\datamanggus";
+            if (!System::IO::Directory::Exists(directoryPath)) {
+                System::IO::Directory::CreateDirectory(directoryPath);
             }
+
+            System::String^ filePath = directoryPath + "\\Mangkudd_DataLog.csv";
+            System::String^ timestamp = System::DateTime::Now.ToString("yyyy-MM-dd HH:mm:ss");
+            System::String^ csvData = timestamp + "," + countA + "," + countB + "," + countC + "," + countD + "\n";
+
+            // Write Header if file doesn't exist
+            if (!System::IO::File::Exists(filePath)) {
+                System::IO::File::WriteAllText(filePath, "Timestamp,Grade A,Grade B,Grade C,Grade D\n", System::Text::Encoding::UTF8);
+            }
+
+            // Append Data
+            System::IO::File::AppendAllText(filePath, csvData, System::Text::Encoding::UTF8);
+            MessageBox::Show(L"Data exported successfully to datamanggus folder!", L"Success", MessageBoxButtons::OK, MessageBoxIcon::Information);
         }
 
     private:
